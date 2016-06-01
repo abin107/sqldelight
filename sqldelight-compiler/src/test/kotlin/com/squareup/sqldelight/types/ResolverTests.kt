@@ -110,6 +110,11 @@ class ResolverTests {
         .hasType("count", Value.SqliteType.INTEGER)
         .hasType("test_column1", Value.SqliteType.INTEGER, "test")
         .hasType("test_column2", Value.SqliteType.TEXT, "test")
+        .hasType("abs", Value.SqliteType.REAL)
+        .hasType("abs2", Value.SqliteType.INTEGER)
+        .hasType("max1", Value.SqliteType.INTEGER)
+        .hasType("max2", Value.SqliteType.INTEGER)
+        .hasType("thirty", Value.SqliteType.INTEGER)
   }
 
   private fun assertThat(values: List<Value>) = ValuesSubject(values)
