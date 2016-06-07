@@ -92,9 +92,13 @@ internal fun Resolver.resolve(
   } else if (expression.K_CASE() != null) {
     val resolutions = expression.expr().map { resolve(it, subqueriesAllowed) }
     val return_expressions = expression.return_expr().map { resolve(it.expr(), subqueriesAllowed) }
+    if (return_expressions[0].values.isEmpty()) {
+      return Resolution(errors = resolutions.flatMap { it.errors }
+          + return_expressions.flatMap { it.errors })
+    }
     return Resolution(
         values = listOf(Value(null, null, return_expressions[0].values[0].type, expression, null)),
-        errors = resolutions.flatMap { it.errors }
+        errors = resolutions.flatMap { it.errors } + return_expressions.flatMap { it.errors }
     )
   } else if (expression.OPEN_PAR() != null) {
     return resolve(expression.expr(0), subqueriesAllowed)
@@ -157,11 +161,19 @@ private fun Resolver.resolveFunction(
       }
       "abs", "coalesce", "ifnull", "likelihood", "likely", "nullif", "unlikely" -> {
         // Functions which return the type of their first argument.
+        if (resolutions[0].values.isEmpty()) {
+          return Resolution(errors = resolutions.flatMap { it.errors })
+        }
         sqliteType = resolutions[0].values[0].type
       }
       "max" -> {
         // NULL < INTEGER < REAL < TEXT < BLOB
-        resolutions.map { it.values[0].type }.forEach {
+        resolutions.map {
+          if (it.values.isEmpty()) {
+            return Resolution(errors = resolutions.flatMap { it.errors })
+          }
+          it.values[0].type
+        }.forEach {
           if (it == Value.SqliteType.BLOB) {
             sqliteType = it
           } else if (it == Value.SqliteType.TEXT && sqliteType != Value.SqliteType.BLOB) {
@@ -176,7 +188,12 @@ private fun Resolver.resolveFunction(
       "min" -> {
         // BLOB < TEXT < INTEGER < REAL < NULL
         sqliteType = Value.SqliteType.BLOB
-        resolutions.map { it.values[0].type }.forEach {
+        resolutions.map {
+          if (it.values.isEmpty()) {
+            return Resolution(errors = resolutions.flatMap { it.errors })
+          }
+          it.values[0].type
+        }.forEach {
           if (it == Value.SqliteType.NULL) {
             sqliteType = it
           } else if (it == Value.SqliteType.REAL && sqliteType != Value.SqliteType.NULL) {
